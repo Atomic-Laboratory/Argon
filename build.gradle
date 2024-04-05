@@ -1,0 +1,75 @@
+apply plugin: "java"
+apply plugin: 'maven-publish'
+
+version '1.0'
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+sourceSets.main.java.srcDirs = ["src"]
+
+compileJava.options.encoding = "UTF-8"
+compileTestJava.options.encoding = "UTF-8"
+
+repositories{
+    mavenCentral()
+    maven{ url "https://raw.githubusercontent.com/Zelaux/MindustryRepo/master/repository" }
+    maven{ url 'https://www.jitpack.io' }
+}
+
+ext{
+    //the build number that this plugin is made for
+    mindustryVersion = 'v146'
+    jabelVersion = "93fde537c7"
+}
+
+dependencies{
+    compileOnly "com.github.Anuken.Arc:arc-core:$mindustryVersion"
+    compileOnly "com.github.Anuken.Mindustry:core:$mindustryVersion"
+    annotationProcessor "com.github.Anuken:jabel:$jabelVersion"
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'
+    implementation 'com.rabbitmq:amqp-client:5.20.0'
+    //implementation 'com.github.Atomic-Laboratory:Argon:0358abd985af23142da701e61ce4c3df7d870e18'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/Argon']
+        }
+    }
+}
+
+jar{
+    archiveFileName = "${project.archivesBaseName}.jar"
+    from{
+        configurations.runtimeClasspath.collect{it.isDirectory() ? it : zipTree(it)}
+    }
+
+    from(rootDir){
+        include "plugin.json"
+    }
+}
+
+tasks.named("jar") {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+// Maven needs a group, this one should do the trick, or if you feeling fancy, your reversed domain name "net.ddns.atomic_laboratory"
+group = "com.github.Atomic-Laboratory"
+
+java {
+    // Publishes the javadoc of your plugin
+    withJavadocJar()
+    // Publishes the sources of your plugin for IDEs
+    withSourcesJar()
+}
+
+publishing {
+    publications {
+        register("main", MavenPublication) {
+            it.from components.java
+        }
+    }
+}

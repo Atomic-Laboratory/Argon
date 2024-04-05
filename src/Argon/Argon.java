@@ -45,7 +45,7 @@ public class Argon extends Plugin {
                 throw new RuntimeException(e);
             }
             Log.debug("Argon: Firing RegisterRabbitQueues");
-            Events.fire(new RegisterRabbitQueues());
+            Events.fire(new RegisterArgonEvents());
         };
     }
 
@@ -119,7 +119,7 @@ public class Argon extends Plugin {
             }
 
             Log.debug("Argon: Firing RegisterRabbitQueues");
-            Events.fire(new RegisterRabbitQueues());
+            Events.fire(new RegisterArgonEvents());
         });
     }
 

@@ -1,7 +1,7 @@
 package example;
 
 import Argon.Argon;
-import Argon.RegisterRabbitQueues;
+import Argon.RegisterArgonEvents;
 import arc.Events;
 import arc.util.Log;
 import mindustry.Vars;
@@ -16,7 +16,7 @@ public class Example extends Plugin {
             Argon.fire(new PlayerKick(event.uuid, event.player.con.address));
         });
 
-        Events.on(RegisterRabbitQueues.class, ignored -> {
+        Events.on(RegisterArgonEvents.class, ignored -> {
             //Argon events listeners go here
             Argon.on(PlayerKick.class, event -> {
                 Log.debug("Received ban event");

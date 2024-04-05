@@ -36,7 +36,7 @@ dependencies{
 sourceSets {
     main {
         java {
-            srcDirs = ['src/Argon']
+            exclude '**/example/*.java'
         }
     }
 }

@@ -1,6 +1,6 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/Atomic-Laboratory/Argon/total)
 ![GitHub Release](https://img.shields.io/github/v/release/Atomic-Laboratory/Argon)
-![Discord](https://img.shields.io/discord/1158888581964779530)
+![Discord](https://img.shields.io/discord/1158888581964779530?link=https%3A%2F%2Fdiscord.gg%2FtSursUVdkC)
 
 ### Overview
 Argon is a Mindustry RabbitMQ client that sends events across servers through the use of Mindustry-like events.

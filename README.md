@@ -71,7 +71,7 @@ dependencies {
 In your plugins.json, append the following:
 ```json
 "dependencies": [
-  "Argon (A RabbitMQ Client)"
+  "argon-rabbitmq"
 ]
 ```
 

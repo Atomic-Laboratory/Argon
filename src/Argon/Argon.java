@@ -65,11 +65,13 @@ public class Argon extends Plugin {
                     factoryDetails = objectMapper.readValue(configFi.file(), RabbitMQDetails.class);
                 } catch (IOException e) {
                     //e.g. save bad/old config as config.json.123123123.old
-                    var old = configFolder.child(configFi.name() + '.' + System.currentTimeMillis() + ".old");
-                    configFi.copyTo(old);
-                    RabbitMQDetails.save();
+                    if (!factoryDetails.equals(new RabbitMQDetails())) {
+                        var old = configFolder.child(configFi.name() + '.' + System.currentTimeMillis() + ".old");
+                        configFi.copyTo(old);
+                        RabbitMQDetails.saveDefault();
+                        Log.err("Argon: Bad config file copied to @ and replaced with a clean config file!", old.absolutePath());
+                    }
                     Log.err(e);
-                    Log.err("Argon: Bad config file copied to @ and replaced with a clean config file!", old.absolutePath());
                     bad = true;
                     break badExit;
                 }
@@ -92,7 +94,7 @@ public class Argon extends Plugin {
                     bad = true;
                 }
             } else {
-                RabbitMQDetails.save();
+                RabbitMQDetails.saveDefault();
                 bad = true;
             }
 

@@ -63,9 +63,13 @@ In order to use this plugin with your custom plugin, you will need to add Argon 
 
 In gradle, add the following:
 ```groovy
+repositories {
+  //other repositories like maven central
+  maven{ url 'https://www.jitpack.io' }
+}
 dependencies {
   //other dependencies
-  compileOnly "com.github.Atomic-Laboratory:Argon:1.0.0"
+  compileOnly "com.github.Atomic-Laboratory:Argon:1.1.0"
 }
 ```
 In your plugins.json, append the following:

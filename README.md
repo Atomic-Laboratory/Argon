@@ -49,7 +49,7 @@ Google how to install a RabbitMQ server, or chatGPT it. The following is a basic
 `sudo apt install rabbitmq-server`
 2) Create a RabbitMQ User  
 `sudo rabbitmqctl add_user username password`
-3) Grand the user external access (so it can talk outside localhost)  
+3) Grant the user external access (so it can talk outside localhost)  
 `sudo rabbitmqctl set_permissions -p / username ".*" ".*" ".*"`
 4) Restart RabbitMQ  
 `sudo systemctl restart rabbitmq-server`

@@ -123,6 +123,7 @@ public class Argon extends Plugin {
 
             Log.debug("Argon: Firing RegisterRabbitQueues");
             Events.fire(new RegisterArgonEvents());
+            Log.info("Argon started successfully!");
         });
     }
 

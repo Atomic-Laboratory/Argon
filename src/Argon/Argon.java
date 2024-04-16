@@ -24,7 +24,6 @@ public class Argon extends Plugin {
     private static final HashMap<String, String> exchangeQueues = new HashMap<>();
     private static final ObjectMap<Object, Seq<Cons<?>>> events = new ObjectMap<>();
     private static ShutdownListener sdl;
-    private static RabbitMQDetails factoryDetails = new RabbitMQDetails();
     private static ConnectionFactory factory;
     private static Connection connection;
     private static Channel channel;
@@ -60,6 +59,8 @@ public class Argon extends Plugin {
 
             badExit:
             if (configFi.exists()) {
+                RabbitMQDetails factoryDetails = new RabbitMQDetails();
+
                 //region read RabbitMQ connection settings
                 try {
                     factoryDetails = objectMapper.readValue(configFi.file(), RabbitMQDetails.class);

@@ -41,7 +41,7 @@ public class Argon extends Plugin {
             try {
                 channel = connection.createChannel();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                Log.err(e);
             }
             Log.debug("Argon: Firing RegisterRabbitQueues");
             Events.fire(new RegisterArgonEvents());
@@ -148,7 +148,7 @@ public class Argon extends Plugin {
                     channel.queueDeclare(name, false, false, false, null);
                     queuesDeclared.add(name);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    Log.err(e);
                 }
             }
             return name;
@@ -164,7 +164,7 @@ public class Argon extends Plugin {
             String queueName = getQueueName(type.getSimpleName(), exchange);//gets, or declares new queue and returns proper name
             try {
                 channel.basicConsume(queueName, true, (consumerTag, delivery) -> {//queue listener
-                    Log.debug("Argon: Received Data on RabbitMQ Queue @", queueName);
+                    Log.debug("Argon: Received Data on RabbitMQ Queue @", type.getSimpleName());
                     Log.debug(new String(delivery.getBody()));
                     //deserialize body to proper class
                     T receivedData = objectMapper.readValue(delivery.getBody(), type);
@@ -178,7 +178,7 @@ public class Argon extends Plugin {
                 }, ignored -> {
                 });
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                Log.err(e);
             }
             return new Seq<>(Cons.class);
         }).add(listener);//get listener seq and add this listener
@@ -201,7 +201,7 @@ public class Argon extends Plugin {
                 channel.basicPublish("", name, null, serializedData);
             }
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            Log.err(e);
         }
     }
 
@@ -224,7 +224,7 @@ public class Argon extends Plugin {
                     Thread.sleep(delay);
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException("Thread interrupted while waiting to reconnect.");
+                    Log.err(new RuntimeException("Thread interrupted while waiting to reconnect."));
                 }
             }
         }

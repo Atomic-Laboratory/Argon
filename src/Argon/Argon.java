@@ -169,12 +169,11 @@ public class Argon extends Plugin {
                     //deserialize body to proper class
                     T receivedData = objectMapper.readValue(delivery.getBody(), type);
                     //give data to all listeners
-                    Seq<Cons<?>> listeners = events.get(type);
-                    if (listeners != null) {
-                        int len = listeners.size;
-                        Cons[] items = listeners.items;
-                        for (int i = 0; i < len; i++)
-                            items[i].get(receivedData);
+                    var l = events.get(type);
+                    if (l != null) {
+                        for (Cons c : l) {
+                            c.get(receivedData);
+                        }
                     }
                 }, ignored -> {
                 });

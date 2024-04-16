@@ -69,7 +69,7 @@ repositories {
 }
 dependencies {
   //other dependencies
-  compileOnly "com.github.Atomic-Laboratory:Argon:1.1.0"
+  compileOnly "com.github.Atomic-Laboratory:Argon:1.1.2"
 }
 ```
 In your plugins.json, append the following:

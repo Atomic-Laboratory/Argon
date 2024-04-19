@@ -69,14 +69,16 @@ repositories {
 }
 dependencies {
   //other dependencies
-  compileOnly "com.github.Atomic-Laboratory:Argon:1.1.2"
+  compileOnly "com.github.Atomic-Laboratory:Argon:1.1.3"
 }
 ```
 In your plugins.json, append the following:
 ```json
-"dependencies": [
-  "argon-rabbitmq"
-]
+{
+  "dependencies": [
+    "argon-rabbitmq"
+  ]
+}
 ```
 
 

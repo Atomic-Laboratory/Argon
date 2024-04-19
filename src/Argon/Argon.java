@@ -2,34 +2,29 @@ package Argon;
 
 import arc.Events;
 import arc.func.Cons;
-import arc.struct.ObjectMap;
-import arc.struct.Seq;
+import arc.struct.StringMap;
+import arc.util.CommandHandler;
 import arc.util.Log;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rabbitmq.client.Channel;
-import com.rabbitmq.client.Connection;
-import com.rabbitmq.client.ConnectionFactory;
-import com.rabbitmq.client.ShutdownListener;
+import com.rabbitmq.client.*;
 import mindustry.Vars;
 import mindustry.game.EventType;
 import mindustry.mod.Plugin;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeoutException;
 
 public class Argon extends Plugin {
-    private static final ArrayList<String> queuesDeclared = new ArrayList<>();
-    private static final HashMap<String, String> exchangeQueues = new HashMap<>();
-    private static final ObjectMap<Object, Seq<Cons<?>>> events = new ObjectMap<>();
+    private static final StringMap queuesDeclared = new StringMap();
+    private static final StringMap exchangeQueues = new StringMap();
+    private static final ConcurrentHashMap<String, CopyOnWriteArrayList<ListenerPair>> events = new ConcurrentHashMap<>();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     private static ShutdownListener sdl;
     private static ConnectionFactory factory;
     private static Connection connection;
     private static Channel channel;
-
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
     private static boolean shutdown = false;
 
     static {
@@ -48,22 +43,9 @@ public class Argon extends Plugin {
         };
     }
 
-    @Override
-    public void init() {
-        Events.on(EventType.ServerLoadEvent.class, event -> start());
-    }
-
-    @Override
-    public void registerServerCommands(CommandHandler handler) {
-        handler.register("argon-restart", "Restart the RabbitMQ connection or Argon", args -> {
-            shutdown();
-            start();
-        });
-    }
-
     private static String getQueueName(String name, boolean exchange) {
         if (exchange) {
-            return exchangeQueues.computeIfAbsent(name, k -> {
+            return exchangeQueues.get(name, () -> {
                 try {
                     Log.debug("Argon: Setting up exchange @", name);
                     var exchangeQueueName = channel.queueDeclare().getQueue();
@@ -76,16 +58,15 @@ public class Argon extends Plugin {
                 }
             });
         } else {
-            if (!queuesDeclared.contains(name)) {
+            return queuesDeclared.get(name, () -> {
                 try {
                     Log.debug("Argon: Setting up queue @", name);
                     channel.queueDeclare(name, false, false, false, null);
-                    queuesDeclared.add(name);
                 } catch (IOException e) {
                     Log.err(e);
                 }
-            }
-            return name;
+                return name;
+            });
         }
     }
 
@@ -93,32 +74,31 @@ public class Argon extends Plugin {
     public static <T> void on(Class<T> type, Cons<T> listener) {
         boolean exchange = !type.isAnnotationPresent(NonExchangeEvent.class);
 
-        events.get(type, () -> {
-            //if no listener seq found, declare a new one
-            String queueName = getQueueName(type.getSimpleName(), exchange);//gets, or declares new queue and returns proper name
+        events.computeIfAbsent(type.getSimpleName(), k -> {
+            //if no listener found, declare a new one
+            String queueName = getQueueName(k, exchange);//gets, or declares new queue and returns proper name
             try {
                 channel.basicConsume(queueName, true, (consumerTag, delivery) -> {//queue listener
-                    Log.debug("Argon: Received Data on RabbitMQ Queue @", type.getSimpleName());
+                    Log.debug("Argon: Received Data on RabbitMQ Queue @", k);
                     Log.debug(new String(delivery.getBody()));
-                    //deserialize body to proper class
-                    T receivedData = objectMapper.readValue(delivery.getBody(), type);
-                    //give data to all listeners
-                    var l = events.get(type);
-                    if (l != null) {
-                        for (Cons c : l) {
-                            c.get(receivedData);
-                        }
+                    //give data to all event listeners
+                    for (ListenerPair ep : events.get(k)) {
+                        Cons c = ep.cons;
+                        //deserialize body to proper class
+                        var receivedData = objectMapper.readValue(delivery.getBody(), ep.tClass);
+                        //fire the event
+                        c.get(receivedData);
                     }
                 }, ignored -> {
                 });
             } catch (AlreadyClosedException ace) {
-                shutdown();
+                shutdown(false);
                 start();
             } catch (IOException e) {
                 Log.err(e);
             }
-            return new Seq<>(Cons.class);
-        }).add(listener);//get listener seq and add this listener
+            return new CopyOnWriteArrayList<>();
+        }).add(new ListenerPair(type, listener));//get listener seq and add this listener
     }
 
     @SuppressWarnings("unused")
@@ -138,7 +118,7 @@ public class Argon extends Plugin {
                 channel.basicPublish("", name, null, serializedData);
             }
         } catch (AlreadyClosedException ace) {
-            shutdown();
+            shutdown(false);
             start();
         } catch (IOException e) {
             Log.err(e);
@@ -241,8 +221,8 @@ public class Argon extends Plugin {
     }
 
     @SuppressWarnings("unused")
-    public static void shutdown() {
-        shutdown = true;
+    public static void shutdown(boolean forever) {
+        shutdown = forever;
 
         queuesDeclared.clear();
         exchangeQueues.clear();
@@ -258,5 +238,21 @@ public class Argon extends Plugin {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public void init() {
+        Events.on(EventType.ServerLoadEvent.class, event -> start());
+    }
+
+    @Override
+    public void registerServerCommands(CommandHandler handler) {
+        handler.register("argon-restart", "Restart the RabbitMQ connection or Argon", args -> {
+            shutdown(false);
+            start();
+        });
+    }
+
+    record ListenerPair(Class<?> tClass, Cons<?> cons) {
     }
 }

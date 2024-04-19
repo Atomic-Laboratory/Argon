@@ -23,6 +23,17 @@ class RabbitMQDetails {
         this.password = password;
     }
 
+    public static void saveDefault() {
+        var configFolder = Vars.modDirectory.child("Argon/");
+        configFolder.mkdirs();
+        var configFi = configFolder.child("config.json");
+        try {
+            configFi.writeString(new ObjectMapper().writeValueAsString(new RabbitMQDetails()));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public String getUrl() {
         return url;
     }
@@ -53,17 +64,6 @@ class RabbitMQDetails {
 
     public void setPassword(String password) {
         this.password = password;
-    }
-
-    public static void saveDefault() {
-        var configFolder = Vars.modDirectory.child("Argon/");
-        configFolder.mkdirs();
-        var configFi = configFolder.child("config.json");
-        try {
-            configFi.writeString(new ObjectMapper().writeValueAsString(new RabbitMQDetails()));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     @Override

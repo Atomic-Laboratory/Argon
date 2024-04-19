@@ -50,80 +50,14 @@ public class Argon extends Plugin {
 
     @Override
     public void init() {
-        Events.on(EventType.ServerLoadEvent.class, event -> {
-            var configFolder = Vars.modDirectory.child("Argon/");
-            configFolder.mkdirs();
-            var configFi = configFolder.child("config.json");
+        Events.on(EventType.ServerLoadEvent.class, event -> start());
+    }
 
-            boolean bad = false;
-
-            badExit:
-            if (configFi.exists()) {
-                RabbitMQDetails factoryDetails = new RabbitMQDetails();
-
-                //region read RabbitMQ connection settings
-                try {
-                    factoryDetails = objectMapper.readValue(configFi.file(), RabbitMQDetails.class);
-                } catch (IOException e) {
-                    //e.g. save bad/old config as config.json.123123123.old
-                    if (!factoryDetails.equals(new RabbitMQDetails())) {
-                        var old = configFolder.child(configFi.name() + '.' + System.currentTimeMillis() + ".old");
-                        configFi.copyTo(old);
-                        RabbitMQDetails.saveDefault();
-                        Log.err("Argon: Bad config file copied to @ and replaced with a clean config file!", old.absolutePath());
-                    }
-                    Log.err(e);
-                    bad = true;
-                    break badExit;
-                }
-                //endregion
-
-                //region RabbitMQ Factory Setup
-                factory = new ConnectionFactory();
-                factory.setHost(factoryDetails.getUrl());
-                factory.setPort(factoryDetails.getPort());
-                factory.setUsername(factoryDetails.getUsername());
-                factory.setPassword(factoryDetails.getPassword());
-                //endregion
-
-                //attempt open the RabbitMQ connection
-                try {
-                    connection = factory.newConnection();
-                    connection.addShutdownListener(sdl);
-                } catch (IOException | TimeoutException e) {
-                    Log.err(e);
-                    bad = true;
-                }
-            } else {
-                RabbitMQDetails.saveDefault();
-                bad = true;
-            }
-
-
-            if (bad) {
-                var h = "#".repeat(97);
-                var t = "\t".repeat(5);
-                Log.warn("\u001B[31m@\u001B[0m", h);
-                Log.warn("\u001B[31m@\u001B[0m", h);
-                Log.warn("");
-                Log.warn("\u001B[31m@@\u001B[0m", t, "Argon config file needs to be configured!");
-                Log.warn("\u001B[31m@@\u001B[0m", t, configFi.absolutePath());
-                Log.warn("");
-                Log.warn("\u001B[31m@\u001B[0m", h);
-                Log.warn("\u001B[31m@\u001B[0m", h);
-                return;
-            }
-
-            try {
-                channel = connection.createChannel();
-            } catch (IOException e) {
-                Log.err(e);
-                return;
-            }
-
-            Log.debug("Argon: Firing RegisterRabbitQueues");
-            Events.fire(new RegisterArgonEvents());
-            Log.info("Argon started successfully!");
+    @Override
+    public void registerServerCommands(CommandHandler handler) {
+        handler.register("argon-restart", "Restart the RabbitMQ connection or Argon", args -> {
+            shutdown();
+            start();
         });
     }
 
@@ -177,6 +111,9 @@ public class Argon extends Plugin {
                     }
                 }, ignored -> {
                 });
+            } catch (AlreadyClosedException ace) {
+                shutdown();
+                start();
             } catch (IOException e) {
                 Log.err(e);
             }
@@ -200,6 +137,9 @@ public class Argon extends Plugin {
             } else {
                 channel.basicPublish("", name, null, serializedData);
             }
+        } catch (AlreadyClosedException ace) {
+            shutdown();
+            start();
         } catch (IOException e) {
             Log.err(e);
         }
@@ -230,9 +170,84 @@ public class Argon extends Plugin {
         }
     }
 
+    private static void start() {
+        var configFolder = Vars.modDirectory.child("Argon/");
+        configFolder.mkdirs();
+        var configFi = configFolder.child("config.json");
+
+        boolean bad = false;
+
+        badExit:
+        if (configFi.exists()) {
+            RabbitMQDetails factoryDetails = new RabbitMQDetails();
+
+            //region read RabbitMQ connection settings
+            try {
+                factoryDetails = objectMapper.readValue(configFi.file(), RabbitMQDetails.class);
+            } catch (IOException e) {
+                //e.g. save bad/old config as config.json.123123123.old
+                if (!factoryDetails.equals(new RabbitMQDetails())) {
+                    var old = configFolder.child(configFi.name() + '.' + System.currentTimeMillis() + ".old");
+                    configFi.copyTo(old);
+                    RabbitMQDetails.saveDefault();
+                    Log.err("Argon: Bad config file copied to @ and replaced with a clean config file!", old.absolutePath());
+                }
+                Log.err(e);
+                bad = true;
+                break badExit;
+            }
+            //endregion
+
+            //region RabbitMQ Factory Setup
+            factory = new ConnectionFactory();
+            factory.setHost(factoryDetails.getUrl());
+            factory.setPort(factoryDetails.getPort());
+            factory.setUsername(factoryDetails.getUsername());
+            factory.setPassword(factoryDetails.getPassword());
+            //endregion
+
+            //attempt open the RabbitMQ connection
+            try {
+                connection = factory.newConnection();
+                connection.addShutdownListener(sdl);
+                channel = connection.createChannel();
+            } catch (IOException | TimeoutException e) {
+                Log.err(e);
+                bad = true;
+            }
+        } else {
+            RabbitMQDetails.saveDefault();
+            bad = true;
+        }
+
+
+        if (bad) {
+            var h = "#".repeat(97);
+            var t = "\t".repeat(5);
+            Log.warn("\u001B[31m@\u001B[0m", h);
+            Log.warn("\u001B[31m@\u001B[0m", h);
+            Log.warn("");
+            Log.warn("\u001B[31m@@\u001B[0m", t, "Argon config file needs to be configured!");
+            Log.warn("\u001B[31m@@\u001B[0m", t, configFi.absolutePath());
+            Log.warn("");
+            Log.warn("\u001B[31m@\u001B[0m", h);
+            Log.warn("\u001B[31m@\u001B[0m", h);
+            return;
+        }
+
+        Log.debug("Argon: Firing RegisterRabbitQueues");
+        Events.fire(new RegisterArgonEvents());
+        Log.info("Argon started successfully!");
+    }
+
     @SuppressWarnings("unused")
     public static void shutdown() {
         shutdown = true;
+
+        queuesDeclared.clear();
+        exchangeQueues.clear();
+        events.clear();
+
         try {
             channel.close();
         } catch (IOException | TimeoutException e) {
